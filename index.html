@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>粉紅療癒海浪：360度無限漂浮</title>
+    <meta name="description" content="全向無限漂浮體驗，結合粉色夢境、真實海浪聲與臨床心理師設計的腹式呼吸引導。">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Zen Maru Gothic', 'Noto Sans TC', sans-serif;
+            background-color: #fce7f3; /* 淺粉底色 */
+            
+            /* 更粉紅的漸層：玫瑰粉 -> 蜜桃粉 -> 夢幻紫 -> 溫暖橘 */
+            background: linear-gradient(135deg, #fbcfe8, #f9a8d4, #e879f9, #fdba74, #f472b6);
+            background-size: 400% 400%;
+            animation: gradientBG 25s ease infinite;
+            
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: grab;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body:active { cursor: grabbing; }
+
+        /* 柔焦光暈層，讓畫面更夢幻 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, rgba(255, 182, 193, 0.4) 100%);
+            backdrop-filter: blur(2px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2;
+        }
+
+        /* SVG 圖示樣式 */
+        .icon-svg {
+            width: 28px; height: 28px;
+            fill: none; stroke: currentColor;
+            stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+
+        /* --- 專業導引區 --- */
+        #breathing-guide {
+            position: fixed;
+            bottom: 15%; /* 保持在視線舒適區 */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 2s ease;
+            width: 95%;
+            max-width: 600px;
+        }
+
+        .breath-visualizer {
+            position: relative;
+            width: 150px; height: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        /* 呼吸光圈：增強白色邊框，使其在粉色背景上突出 */
+        .breath-circle-outer {
+            position: absolute;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            border: 5px solid rgba(255, 255, 255, 0.95);
+            box-shadow: 0 0 60px rgba(255, 255, 255, 0.8), inset 0 0 30px rgba(255,255,255,0.4);
+            opacity: 0.9;
+            transition: transform 0.1s linear;
+        }
+
+        .breath-circle-inner {
+            width: 15%; height: 15%;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 0 40px #fff;
+            transition: transform 0.1s linear;
+        }
+
+        .guide-text-container {
+            /* 深色半透明背景，確保白字清晰可讀 */
+            background: rgba(131, 24, 67, 0.25); /* 深莓紅透明底 */
+            backdrop-filter: blur(12px);
+            padding: 20px 40px;
+            border-radius: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid rgba(255,255,255,0.4);
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .guide-text-primary {
+            font-size: 2.8rem; font-weight: 900; color: #fff;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            margin-bottom: 8px; line-height: 1.1;
+        }
+
+        .guide-text-sub {
+            font-size: 1.3rem; font-weight: 700; color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+
+        /* 正向語句 */
+        .affirmation-text {
+            position: absolute;
+            font-size: 2.2rem; font-weight: 900; color: #831843; /* 深粉紅字體 */
+            text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+            z-index: 10;
+            transform: translate(-50%, -50%);
+            animation: softFloat 5s ease-out forwards;
+            white-space: nowrap;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(4px);
+            padding: 8px 24px;
+            border-radius: 50px;
+        }
+
+        @keyframes softFloat {
+            0% { opacity: 0; transform: translate(-50%, 30%) scale(0.8); }
+            15% { opacity: 1; transform: translate(-50%, -20%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -150%) scale(1); }
+        }
+
+        /* UI 面板 */
+        #ui-layer {
+            position: fixed; z-index: 20; top: 30px; left: 30px; color: #831843;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            padding: 10px 24px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.6);
+            font-size: 1.1rem; font-weight: 700;
+            display: inline-flex; align-items: center; gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            color: #831843;
+        }
+
+        h1.title {
+            font-size: 2.2rem; font-weight: 900; color: #be185d;
+            text-shadow: 2px 2px 0px rgba(255,255,255,0.6);
+            margin-bottom: 0.5rem;
+        }
+
+        /* 啟動遮罩 */
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 245, 247, 0.95); /* 不透明暖白粉底 */
+            backdrop-filter: blur(15px);
+            z-index: 100;
+            display: flex; justify-content: center; align-items: center;
+            flex-direction: column;
+            transition: opacity 1.5s ease;
+        }
+
+        .btn-start {
+            padding: 22px 60px; font-size: 1.6rem;
+            background: linear-gradient(135deg, #f472b6, #db2777);
+            color: white; border: none;
+            border-radius: 60px; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(219, 39, 119, 0.3);
+            font-weight: 700; transition: transform 0.3s, box-shadow 0.3s;
+            letter-spacing: 0.05em;
+        }
+        .btn-start:hover { 
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(219, 39, 119, 0.4); 
+        }
+
+        .pan-hint {
+            position: fixed; top: 50%; width: 100%;
+            display: flex; justify-content: space-between; padding: 0 30px;
+            pointer-events: none; z-index: 15; opacity: 0.5;
+            animation: pulseHint 4s infinite;
+            color: #be185d;
+        }
+        @keyframes pulseHint { 0%, 100% { opacity: 0.2; transform: scale(0.9); } 50% { opacity: 0.7; transform: scale(1.1); } }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div id="text-layer"></div>
+
+    <div class="pan-hint">
+        <!-- Up/Down/Left/Right hints implied by arrows -->
+        <div class="bg-white/40 rounded-full p-3 backdrop-blur-md shadow-sm">
+            <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </div>
+        <div class="bg-white/40 rounded-full p-3 backdrop-blur-md shadow-sm">
+            <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        <h1 class="title">粉紅漂浮夢境</h1>
+        <div class="glass-panel" id="stone-counter">
+            <svg class="icon-svg" viewBox="0 0 24 24" style="color: #db2777;">
+                <path d="M6 3h12l4 6-10 13L2 9z"></path> <!-- Diamond shape -->
+            </svg>
+            <span id="counter-text">蒐集能量：--</span>
+        </div>
+    </div>
+
+    <div id="breathing-guide">
+        <div class="breath-visualizer">
+            <div class="breath-circle-outer" id="breath-outer"></div>
+            <div class="breath-circle-inner" id="breath-inner"></div>
+        </div>
+        <div class="guide-text-container">
+            <div class="guide-text-primary" id="guide-main">準備</div>
+            <div class="guide-text-sub" id="guide-sub">調整至舒服的姿勢</div>
+        </div>
+    </div>
+
+    <div id="start-overlay">
+        <div class="text-center px-6 max-w-3xl">
+            <h2 class="text-4xl text-pink-700 mb-6 font-bold tracking-widest">無重力放鬆旅程</h2>
+            <div class="w-20 h-2 bg-pink-400 mx-auto mb-8 rounded-full"></div>
+            <p class="text-pink-600 mb-2 text-2xl font-bold">全向漂浮 · 療癒海浪 · 腹式呼吸</p>
+            <p class="text-pink-500 mb-12 text-lg">戴上耳機，在粉色海洋中自由翱翔</p>
+            <button id="start-btn" class="btn-start">開始漂浮</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 核心變數 ---
+        const VIRTUAL_WIDTH = 4000;
+        const VIRTUAL_HEIGHT = 3000; // 增加垂直虛擬高度
+        
+        let cameraX = 0;
+        let cameraY = 0;
+        let targetCameraX = 0;
+        let targetCameraY = 0;
+        
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let prevDragX = 0;
+        let prevDragY = 0;
+        
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        
+        let swayTime = 0;
+
+        const AFFIRMATIONS = [
+            "我是安全的", "全然的放鬆", "溫柔的愛", 
+            "隨波逐流", "接納自己", "內心平靜", 
+            "呼吸是自由的", "擁抱當下", "釋放所有重擔", 
+            "我很珍貴", "充滿光芒", "心靈澄澈"
+        ];
+
+        // --- 音效引擎 (舒緩海浪版) ---
+        const AudioEngine = {
+            ctx: null,
+            init() {
+                if (this.ctx) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                this.ctx = new AudioContext();
+                this.startOcean();
+                this.startWarmPad();
+            },
+            
+            // 1. 粉紅噪音海浪 (Pink Noise Ocean)
+            startOcean() {
+                if (!this.ctx) return;
+                const bufferSize = 2 * this.ctx.sampleRate;
+                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                
+                // 產生粉紅噪音 (Pink Noise) - 比白噪音更柔和，像大自然的聲音
+                let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    b0 = 0.99886 * b0 + white * 0.0555179;
+                    b1 = 0.99332 * b1 + white * 0.0750759;
+                    b2 = 0.96900 * b2 + white * 0.1538520;
+                    b3 = 0.86650 * b3 + white * 0.3104856;
+                    b4 = 0.55000 * b4 + white * 0.5329522;
+                    b5 = -0.7616 * b5 - white * 0.0168980;
+                    output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                    output[i] *= 0.11; 
+                    b6 = white * 0.115926;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = noiseBuffer;
+                noise.loop = true;
+                
+                // 低通濾波器：模擬浪潮的遠近
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 400;
+
+                const gain = this.ctx.createGain();
+                gain.gain.value = 0.05;
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start();
+
+                // 模擬潮汐呼吸：10秒一個週期
+                setInterval(() => {
+                    if(this.ctx.state === 'running') {
+                        const t = this.ctx.currentTime;
+                        // 漲潮 (音量變大，頻率變高)
+                        gain.gain.setTargetAtTime(0.15, t, 4); 
+                        filter.frequency.setTargetAtTime(800, t, 4);
+                        
+                        // 退潮 (音量變小，頻率變低)
+                        setTimeout(() => {
+                            gain.gain.setTargetAtTime(0.04, t + 5, 5);
+                            filter.frequency.setTargetAtTime(300, t + 5, 5);
+                        }, 5000);
+                    }
+                }, 10000);
+            },
+
+            // 2. 溫暖的背景墊音 (Warm Pad)
+            startWarmPad() {
+                // 選用非常和諧的大調和弦 (F Major 7)
+                const freqs = [174.61, 220.00, 261.63, 349.23]; 
+                freqs.forEach((f, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = f;
+                    gain.gain.value = 0;
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+
+                    // 極慢的起伏
+                    setInterval(() => {
+                        if(this.ctx.state === 'running') {
+                            const t = this.ctx.currentTime;
+                            const vol = Math.random() * 0.02 + 0.01;
+                            gain.gain.setTargetAtTime(vol, t, 5);
+                        }
+                    }, 4000 + i * 1000);
+                });
+            }
+        };
+
+        // --- 呼吸訓練 (專業臨床心理師版) ---
+        const BreathingSystem = {
+            isRunning: false,
+            els: {
+                main: document.getElementById('guide-main'),
+                sub: document.getElementById('guide-sub'),
+                outer: document.getElementById('breath-outer')
+            },
+            start() {
+                this.isRunning = true;
+                document.getElementById('breathing-guide').style.opacity = 1;
+                this.cycle();
+            },
+            cycle() {
+                if (!this.isRunning) return;
+                
+                // 4-4-6 呼吸法 (能夠有效啟動副交感神經)
+                // 吸氣 4秒
+                this.phase("鼻子吸氣", "感受腹部慢慢隆起", 1.5, 4000, 'in')
+                // 屏氣 4秒
+                .then(() => this.phase("輕輕屏息", "感受當下的寧靜", 1.5, 4000, 'hold'))
+                // 吐氣 6秒 (吐氣比吸氣長是關鍵)
+                .then(() => this.phase("嘴巴吐氣", "像吹蠟燭般緩慢釋放", 1.0, 6000, 'out'))
+                .then(() => { if(this.isRunning) this.cycle(); });
+            },
+            phase(m, s, scale, dur, type) {
+                return new Promise(resolve => {
+                    // 文字切換動畫
+                    this.els.main.parentElement.style.transform = "scale(0.98)";
+                    setTimeout(() => {
+                        this.els.main.textContent = m;
+                        this.els.sub.textContent = s;
+                        this.els.main.parentElement.style.transform = "scale(1)";
+                    }, 100);
+
+                    this.els.outer.style.transition = `transform ${dur}ms cubic-bezier(0.4,0,0.2,1)`;
+                    this.els.outer.style.transform = `scale(${scale})`;
+                    
+                    if (type === 'in') {
+                        this.els.outer.style.borderColor = "rgba(255, 255, 255, 1)";
+                        this.els.outer.style.boxShadow = "0 0 80px rgba(255, 255, 255, 0.9)";
+                    } else if (type === 'out') {
+                        this.els.outer.style.borderColor = "rgba(255, 255, 255, 0.6)";
+                        this.els.outer.style.boxShadow = "0 0 30px rgba(255, 255, 255, 0.3)";
+                    }
+                    
+                    setTimeout(resolve, dur);
+                });
+            }
+        };
+
+        // --- 視覺引擎 ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let pearls = [], bgStars = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Star {
+            constructor() {
+                this.x = Math.random() * VIRTUAL_WIDTH;
+                this.y = Math.random() * VIRTUAL_HEIGHT;
+                this.size = Math.random() * 2.5;
+                this.alpha = Math.random();
+                this.blink = Math.random() * 0.015;
+            }
+            draw(ctx, camX, camY) {
+                this.alpha += this.blink;
+                if(this.alpha>1 || this.alpha<0.2) this.blink *= -1;
+                
+                // X 軸循環
+                let dx = (this.x - camX * 0.3) % VIRTUAL_WIDTH;
+                if (dx < 0) dx += VIRTUAL_WIDTH;
+                if (dx > width) dx -= VIRTUAL_WIDTH;
+                
+                // Y 軸循環 (實現上下無限移動)
+                let dy = (this.y - camY * 0.3) % VIRTUAL_HEIGHT;
+                if (dy < 0) dy += VIRTUAL_HEIGHT;
+                if (dy > height) dy -= VIRTUAL_HEIGHT;
+
+                if (dx > -10 && dx < width + 10 && dy > -10 && dy < height + 10) {
+                    ctx.fillStyle = `rgba(255,255,255,${this.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(dx, dy, this.size, 0, Math.PI*2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        class Pearl {
+            constructor() {
+                this.virtualX = Math.random() * VIRTUAL_WIDTH;
+                this.virtualY = Math.random() * VIRTUAL_HEIGHT;
+                this.radius = 40 + Math.random() * 20; // 珍珠很大，好點
+                this.color = ['#f472b6', '#fbbf24', '#e879f9', '#ffffff'][Math.floor(Math.random()*4)];
+                this.offset = Math.random() * 10;
+                this.collected = false;
+                this.screenX = 0;
+                this.screenY = 0;
+            }
+            draw(ctx, camX, camY) {
+                if(this.collected) return;
+                let time = Date.now()/1000;
+                
+                // X 軸循環
+                let dx = (this.virtualX - camX) % VIRTUAL_WIDTH;
+                if (dx < -200) dx += VIRTUAL_WIDTH;
+                if (dx > width + 200) dx -= VIRTUAL_WIDTH;
+
+                // Y 軸循環 (加上漂浮動畫)
+                let floatY = Math.sin(time + this.offset) * 15;
+                let dy = (this.virtualY - camY + floatY) % VIRTUAL_HEIGHT;
+                if (dy < -200) dy += VIRTUAL_HEIGHT;
+                if (dy > height + 200) dy -= VIRTUAL_HEIGHT;
+
+                this.screenX = dx;
+                this.screenY = dy;
+
+                // 優化：只畫螢幕內的
+                if (dx < -100 || dx > width + 100 || dy < -100 || dy > height + 100) return;
+
+                ctx.save();
+                ctx.translate(dx, dy);
+                
+                // 光暈
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 40;
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI*2);
+                const g = ctx.createRadialGradient(-15, -15, 0, 0, 0, this.radius);
+                g.addColorStop(0, '#fff');
+                g.addColorStop(0.4, this.color);
+                g.addColorStop(1, this.color);
+                ctx.fillStyle = g;
+                ctx.fill();
+                
+                ctx.restore();
+            }
+            isHit(mx, my) {
+                // 擴大感應區 2倍
+                const dist = Math.hypot(this.screenX - mx, this.screenY - my);
+                return dist < this.radius * 2.0; 
+            }
+        }
+
+        function init() {
+            bgStars = []; pearls = [];
+            for(let i=0; i<120; i++) bgStars.push(new Star());
+            for(let i=0; i<35; i++) pearls.push(new Pearl());
+            updateUI();
+        }
+
+        function updateUI() {
+            const left = pearls.filter(p => !p.collected).length;
+            document.getElementById('counter-text').innerText = `蒐集能量：${left}`;
+            if(left === 0) {
+                setTimeout(() => {
+                    spawnText(width/2, height/2, "身 心 圓 滿", 5);
+                    setTimeout(init, 4000);
+                }, 500);
+            }
+        }
+
+        function spawnText(x, y, txt, scale=1) {
+            const el = document.createElement('div');
+            el.className = 'affirmation-text';
+            el.innerText = txt;
+            if(scale > 1) el.style.fontSize = scale + 'rem';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            document.getElementById('text-layer').appendChild(el);
+            setTimeout(() => el.remove(), 4000);
+        }
+
+        function loop() {
+            // 慣性滑動
+            cameraX += (targetCameraX - cameraX) * 0.08;
+            cameraY += (targetCameraY - cameraY) * 0.08;
+
+            ctx.clearRect(0, 0, width, height);
+            
+            // 繪製背景星塵
+            bgStars.forEach(s => s.draw(ctx, cameraX, cameraY));
+            
+            let hovering = false;
+            pearls.forEach(p => {
+                p.draw(ctx, cameraX, cameraY);
+                if(!p.collected && p.isHit(lastMouseX, lastMouseY)) hovering = true;
+            });
+            document.body.style.cursor = isDragging ? 'grabbing' : (hovering ? 'pointer' : 'grab');
+
+            requestAnimationFrame(loop);
+        }
+
+        // --- 全向拖曳邏輯 ---
+        function handleStart(x, y) {
+            isDragging = true;
+            startX = x;
+            startY = y;
+            prevDragX = x;
+            prevDragY = y;
+            lastMouseX = x;
+            lastMouseY = y;
+        }
+        function handleMove(x, y) {
+            lastMouseX = x;
+            lastMouseY = y;
+            if(isDragging) {
+                let dx = x - prevDragX;
+                let dy = y - prevDragY;
+                
+                // 反向移動相機
+                targetCameraX -= dx * 1.5;
+                targetCameraY -= dy * 1.5;
+                
+                prevDragX = x;
+                prevDragY = y;
+            }
+        }
+        function handleEnd(x, y) {
+            isDragging = false;
+            if(Math.hypot(x - startX, y - startY) < 10) { // 點擊判定
+                for(let i=pearls.length-1; i>=0; i--) {
+                    if(!pearls[i].collected && pearls[i].isHit(x, y)) {
+                        pearls[i].collected = true;
+                        spawnText(x, y, AFFIRMATIONS[Math.floor(Math.random()*AFFIRMATIONS.length)]);
+                        updateUI();
+                        break;
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('mousedown', e => handleStart(e.clientX, e.clientY));
+        window.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', e => handleEnd(e.clientX, e.clientY));
+
+        window.addEventListener('touchstart', e => handleStart(e.touches[0].clientX, e.touches[0].clientY), {passive:false});
+        window.addEventListener('touchmove', e => {
+            e.preventDefault();
+            handleMove(e.touches[0].clientX, e.touches[0].clientY);
+        }, {passive:false});
+        window.addEventListener('touchend', e => {
+            const t = e.changedTouches[0];
+            handleEnd(t.clientX, t.clientY);
+        });
+
+        // 啟動
+        document.getElementById('start-btn').addEventListener('click', () => {
+            AudioEngine.init();
+            BreathingSystem.start();
+            const ov = document.getElementById('start-overlay');
+            ov.style.opacity = 0;
+            setTimeout(() => ov.style.display = 'none', 1000);
+            init();
+            loop();
+        });
+
+    </script>
+</body>
+</html>
